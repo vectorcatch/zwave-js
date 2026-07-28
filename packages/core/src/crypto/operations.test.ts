@@ -1,6 +1,12 @@
+import { primitives as defaultPrimitives } from "#crypto_primitives";
 import { Bytes, type BytesView } from "@zwave-js/shared";
 import { type ExpectStatic, test } from "vitest";
-import { computeCMAC, computeMAC } from "./operations.js";
+import {
+	computeCMAC,
+	computeMAC,
+	randomBytes,
+	setCryptoPrimitives,
+} from "./operations.js";
 
 function assertBufferEquals(
 	expect: ExpectStatic,
@@ -73,4 +79,18 @@ test(`computeCMAC() -> should work correctly (part 4)`, async (t) => {
 	const expected = Bytes.from("51F0BEBF7E3B9D92FC49741779363CFE", "hex");
 	const actual = await computeCMAC(plaintext, key);
 	assertBufferEquals(t.expect, actual, expected);
+});
+
+test(`setCryptoPrimitives() -> redirects calls to the given implementation`, (t) => {
+	const stubbedRandomBytes = new Uint8Array([1, 2, 3, 4]);
+	setCryptoPrimitives({
+		...defaultPrimitives,
+		randomBytes: () => stubbedRandomBytes,
+	});
+	try {
+		t.expect(randomBytes(4)).toBe(stubbedRandomBytes);
+	} finally {
+		setCryptoPrimitives(defaultPrimitives);
+	}
+	t.expect(randomBytes(4)).not.toBe(stubbedRandomBytes);
 });
